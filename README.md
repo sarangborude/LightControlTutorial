@@ -1,3 +1,5 @@
+#This project goes along with the youtube video series on Controlling Philips Hue lights with Apple Vision Pro
+
 This is a companion project for the Youtube video series on Controlling Philips Hue Lights using an Apple vision pro. 
 The tutorial series dives deep in how to make build persistent AR Experiences on apple vision pro using ARKit world anchors. 
 
