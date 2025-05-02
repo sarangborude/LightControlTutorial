@@ -11,6 +11,12 @@ import SwiftUI
 struct LightControlTutorialApp: App {
 
     @State private var appModel = AppModel()
+    
+    init() {
+        LightControlComponent.registerComponent()
+        ProjectileComponent.registerComponent()
+        ProjectileCollisionSystem.registerSystem()
+    }
 
     var body: some Scene {
         WindowGroup {

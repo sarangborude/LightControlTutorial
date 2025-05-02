@@ -38,12 +38,23 @@ class AppModel {
         }
     }
     
+    enum LightControlMode {
+        case lookAndPinch
+        case slingShot
+    }
+    
+    public var lightControlMode: LightControlMode = .lookAndPinch
+    
+    public var onLightControlModeChanged: (()->Void)?
+    
     // When a person denies authorization or a data provider state changes to an error condition,
     // the main window displays an error message based on the `errorState`.
     var errorState: ErrorState = .noError
     
     private let session = ARKitSession()
     private let worldTracking = WorldTrackingProvider()
+    
+    var handTrackingManager: HandTrackingManager!
     
     let contentRoot = Entity()
     var lightConfigUI = Entity()
@@ -67,6 +78,7 @@ class AppModel {
     var onLightControlUIPresented: (()->Void)?
     
     init() {
+        handTrackingManager = HandTrackingManager(appModel: self)
         lightsInfoPersistenceManager.loadLightControlComponentsFromDisk()
         
         if !areAllDataProvidersSupported {
@@ -99,6 +111,11 @@ class AppModel {
     /// Sets up the root entity in the scene.
     func setupContentEntity() -> Entity {
         return contentRoot
+    }
+    
+    func changeLightControlMode(_ newMode: LightControlMode) {
+        self.lightControlMode = newMode
+        onLightControlModeChanged?()
     }
     
     private var areAllDataProvidersSupported: Bool {
@@ -138,7 +155,8 @@ class AppModel {
     
     func runSession() async {
         do {
-            try await session.run([worldTracking])
+            try await session.run([worldTracking,
+                                   handTrackingManager.handTracking])
         } catch {
             guard error is ARKitSession.Error else {
                 preconditionFailure("Unexpected error \(error).")
@@ -373,4 +391,6 @@ class AppModel {
 //            }
 //        }
     }
+    
+    
 }

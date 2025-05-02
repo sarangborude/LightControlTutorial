@@ -169,6 +169,21 @@ struct ContentView: View {
                 .padding(.top, 100)
                 .padding(.bottom, 100)
             
+            VStack {
+                HStack {
+                    Text("Lights control mode : ")
+                    Text(String(describing: appModel.lightControlMode))
+                }
+                HStack {
+                    Button("Look And Pinch") {
+                        appModel.changeLightControlMode(.lookAndPinch)
+                    }
+                    Button("Sling Shot") {
+                        appModel.changeLightControlMode(.slingShot)
+                    }
+                }
+            }
+            
             if(appModel.immersiveSpaceState == .open) {
                 // show content here for when immersive view is open.
                 VStack {

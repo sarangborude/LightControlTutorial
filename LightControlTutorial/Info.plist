@@ -7,6 +7,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSHandsTrackingUsageDescription</key>
+	<string>App uses hand tracking for controlling lights with slingshot</string>
 	<key>NSWorldSensingUsageDescription</key>
 	<string>App uses world sensing to remember where it placed lights</string>
 	<key>UIApplicationSceneManifest</key>

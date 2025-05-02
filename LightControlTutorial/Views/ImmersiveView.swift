@@ -20,6 +20,9 @@ struct ImmersiveView: View {
     @State private var longPressTimerActive = false
     @State private var longPressTriggered = false
     
+    @State private var slingShotMechanismManager = SlingShotMechanismManager()
+    @State private var trajectoryManager = TrajectoryManager()
+    
     var body: some View {
         RealityView { content, attachments in
             content.add(appModel.setupContentEntity())
@@ -64,6 +67,10 @@ struct ImmersiveView: View {
         .task {
             await appModel.processWorldTrackingUpdates()
         }
+        .task {
+            await appModel.handTrackingManager.monitorGestures()
+        }
+        .upperLimbVisibility(.hidden)
         .gesture(SpatialTapGesture()
             .targetedToEntity(where: .has(LightControlComponent.self))
             .onEnded({ event in
@@ -122,18 +129,84 @@ struct ImmersiveView: View {
         
         /// Long press gesture doesn't work reliably, the issue is also that you have to release it  so doesn't work great,
         /// we need something that activates when the user presses and holds
-//        .gesture(LongPressGesture(minimumDuration: 0.5)
-//            .targetedToEntity(where: .has(LightControlComponent.self))
-//            .onChanged({ event in
-//                print("long press on changed")
-//            })
-//                .onEnded { event in
-//                    print("This is a long press gesture")
-//                    appModel.currentlySelectedComponent = event.entity.components[LightControlComponent.self]
-//                    appModel.selectedLightControlEntity = event.entity
-//                    handleLongTapGestureWhenNotEditing()
-//                }
-//        )
+        //        .gesture(LongPressGesture(minimumDuration: 0.5)
+        //            .targetedToEntity(where: .has(LightControlComponent.self))
+        //            .onChanged({ event in
+        //                print("long press on changed")
+        //            })
+        //                .onEnded { event in
+        //                    print("This is a long press gesture")
+        //                    appModel.currentlySelectedComponent = event.entity.components[LightControlComponent.self]
+        //                    appModel.selectedLightControlEntity = event.entity
+        //                    handleLongTapGestureWhenNotEditing()
+        //                }
+        //        )
+
+        //Drag gesture handling for slingshot mechanism
+        .gesture(DragGesture()
+            .targetedToEntity(where: .has(ProjectileComponent.self))
+            .onChanged({ value in
+                
+                // Update the current drag offset
+                if let parent = value.entity.parent {
+                    let currentPosition = value.convert(value.location3D, from: .local, to: parent)
+                    let startPosition = appModel.handTrackingManager.slingShotGestureManager?.midpointEntity.position
+                    
+                    slingShotMechanismManager.updateDrag(to: currentPosition, newInitialPosition: startPosition)
+                    
+                    // Show trajectory when user is pulling back
+                    let impulse = slingShotMechanismManager.computedImpulse()
+                    let impulseDirection = normalize(impulse)
+                    let start = currentPosition
+                    let end = start + impulseDirection * 1.5 // change multiplier for longer prediction
+
+                    // Curve control point in the middle but raised for arc shape
+                    var control = (start + end) / 2
+                    control.y += 0.05
+
+                    trajectoryManager.updateTrajectory(start: start, control: control, end: end, rootEntity: parent)
+
+                    // Update the projectile's visual position to reflect the pull-back:
+                    value.entity.position = (slingShotMechanismManager.initialDragPosition ?? currentPosition) + slingShotMechanismManager.currentDragOffset
+                }
+                
+                if var pc = value.entity.components[ProjectileComponent.self] {
+                    if pc.hasBeenManipulated {
+                        return
+                    }
+                    pc.hasBeenManipulated = true
+                    value.entity.components[ProjectileComponent.self] = pc
+                }
+            })
+                .onEnded({ value in
+                    
+                    // remove the trajectory
+                    trajectoryManager.clearTrajectory()
+                    
+                    // Compute the impulse from the slingshot pull
+                    let impulse = slingShotMechanismManager.computedImpulse()
+                    
+                    // Retrieve and update the projectile's physics body to apply the force
+                    if var physicsBody = value.entity.components[PhysicsBodyComponent.self] {
+                        physicsBody.isAffectedByGravity = true
+                        value.entity.components[PhysicsBodyComponent.self] = physicsBody
+                        // Here, you would apply the impulse force. Depending on your implementation,
+                        // you might use an applyImpulse method or manually update the entity's velocity.
+                        // For example:
+                        if let modelEntity = value.entity as? ModelEntity {
+                            modelEntity.applyImpulse(impulse, at: modelEntity.position, relativeTo: nil)
+                        }
+                    }
+                    
+                    // Reset the entity after the collision..
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        appModel.handTrackingManager.slingShotGestureManager?.resetEntities()
+                    }
+                    
+                    // Reset the slingshot manager for the next interaction
+                    slingShotMechanismManager = SlingShotMechanismManager()
+                })
+        )
     }
     
     
