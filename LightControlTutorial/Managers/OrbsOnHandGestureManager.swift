@@ -104,7 +104,7 @@ class OrbsOnHandGestureManager {
                 let ringPosition = palmPosition + SIMD3<Float>(0, 0.2, 0)
                 orbRingEntity.transform = Transform(translation: ringPosition)
                 
-                // Making the orb ring bilboard to the user.
+                // Making the orb ring bilboard to the user manually.
                 if(!isAnimating) {
                     // make the ring of orbs face the user.
                     let cameraTransform = appModel.getCurrentDeviceTransform()
