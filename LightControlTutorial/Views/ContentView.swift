@@ -181,6 +181,9 @@ struct ContentView: View {
                     Button("Sling Shot") {
                         appModel.changeLightControlMode(.slingShot)
                     }
+                    Button("Ring of Orbs") {
+                        appModel.changeLightControlMode(.orbsOnHand)
+                    }
                 }
             }
             

@@ -68,9 +68,11 @@ struct ImmersiveView: View {
             await appModel.processWorldTrackingUpdates()
         }
         .task {
-            await appModel.handTrackingManager.monitorGestures()
+            //await appModel.handTrackingManager.monitorGestures()
+            // we handle this is HandTrackingManager now to deal with mode changes.
         }
         .upperLimbVisibility(.hidden)
+        .persistentSystemOverlays(.hidden)
         .gesture(SpatialTapGesture()
             .targetedToEntity(where: .has(LightControlComponent.self))
             .onEnded({ event in
@@ -141,7 +143,7 @@ struct ImmersiveView: View {
         //                    handleLongTapGestureWhenNotEditing()
         //                }
         //        )
-
+        
         //Drag gesture handling for slingshot mechanism
         .gesture(DragGesture()
             .targetedToEntity(where: .has(ProjectileComponent.self))
@@ -159,13 +161,13 @@ struct ImmersiveView: View {
                     let impulseDirection = normalize(impulse)
                     let start = currentPosition
                     let end = start + impulseDirection * 1.5 // change multiplier for longer prediction
-
+                    
                     // Curve control point in the middle but raised for arc shape
                     var control = (start + end) / 2
                     control.y += 0.05
-
+                    
                     trajectoryManager.updateTrajectory(start: start, control: control, end: end, rootEntity: parent)
-
+                    
                     // Update the projectile's visual position to reflect the pull-back:
                     value.entity.position = (slingShotMechanismManager.initialDragPosition ?? currentPosition) + slingShotMechanismManager.currentDragOffset
                 }
@@ -206,6 +208,31 @@ struct ImmersiveView: View {
                     // Reset the slingshot manager for the next interaction
                     slingShotMechanismManager = SlingShotMechanismManager()
                 })
+        )
+        
+        //Drag gesture handling for orbs on hand
+        .gesture(DragGesture()
+            .targetedToEntity(where: .has(OrbComponent.self))
+            .onChanged({ value in
+                guard let parentEntity = value.entity.parent else { return }
+                
+                let newPosition = value.convert(value.location3D, from: .local, to: parentEntity)
+                value.entity.position = newPosition
+                appModel.handTrackingManager.orbsOnHandGestureManager?.updateDraggedOrb(value.entity as! ModelEntity)
+                
+                // change the parent of the orb to content root so it doesn't move with the ring.
+                if var orbComponent = value.entity.components[OrbComponent.self] {
+                    if orbComponent.hasBeenManipulated == false {
+                        orbComponent.hasBeenManipulated = true
+                        value.entity.components[OrbComponent.self] = orbComponent
+                        value.entity.parent?.parent?.parent?.addChild(value.entity)
+                        // entities parent is the animatedRingEnity, its parent is the orbRingEntity and it's parent is the content root
+                    }
+                }
+            })
+            .onEnded({ value in
+                appModel.handTrackingManager.orbsOnHandGestureManager?.onSphereReleased(value.entity as! ModelEntity)
+            })
         )
     }
     

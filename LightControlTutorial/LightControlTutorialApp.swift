@@ -16,6 +16,9 @@ struct LightControlTutorialApp: App {
         LightControlComponent.registerComponent()
         ProjectileComponent.registerComponent()
         ProjectileCollisionSystem.registerSystem()
+        OrbComponent.registerComponent()
+        OrbCollisionSystem.appModel = appModel
+        OrbCollisionSystem.registerSystem()
     }
 
     var body: some Scene {

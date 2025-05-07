@@ -41,6 +41,7 @@ class AppModel {
     enum LightControlMode {
         case lookAndPinch
         case slingShot
+        case orbsOnHand
     }
     
     public var lightControlMode: LightControlMode = .lookAndPinch
